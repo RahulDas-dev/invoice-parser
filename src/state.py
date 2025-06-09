@@ -3,7 +3,7 @@ import logging
 import re
 from typing import Any
 from pydantic import BaseModel, Field
-from output_format import Invoice
+from src.output_format import Invoice
 
 
 logger = logging.getLogger(__name__)

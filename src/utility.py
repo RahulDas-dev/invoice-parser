@@ -1,10 +1,17 @@
 import asyncio
+from collections.abc import Mapping
 import io
 import os
 from pathlib import Path
 import re
 from typing import AsyncGenerator
 from PIL import Image
+
+
+async def async_range(count: int) -> AsyncGenerator[int, None]:
+    for i in range(count):
+        yield i
+        await asyncio.sleep(0.0)
 
 
 def get_aws_keys() -> dict:
@@ -15,9 +22,9 @@ def get_aws_keys() -> dict:
     }
 
 
-def extract_page_no(file: Path, image_ext: str = "png") -> tuple[str, int]:
+def extract_page_no(file: Path, image_ext: str = "png") -> tuple[Path, int]:
     match = re.search(rf"Page_(\d+)\.{image_ext}", file.name)
-    return str(file), int(match.group(1) if match else 10e5)
+    return file, int(match.group(1) if match else 10e5)
 
 
 async def sorted_images(
@@ -81,7 +88,7 @@ DEFAULT_INVOICE_METADATA = {
 }
 
 
-def extract_invoice_metadata(text: str) -> dict[str, str | bool]:
+def extract_invoice_metadata(text: str) -> Mapping[str, str | bool]:
     """
     Extracts the page number from the page content.
 
@@ -97,11 +104,18 @@ def extract_invoice_metadata(text: str) -> dict[str, str | bool]:
         "line_item_start_number": r'"line_item_start_number"\s*:\s*([\d]+)',
         "line_item_end_number": r'"line_item_end_number"\s*:\s*([\d]+)',
         "line_items_present": r'"line_items_present"\s*:\s*(true|false|True|False)',
-        "total_amount": r'"total_amount"\s*:\s*"([\d,.]+)(?:[^"]*)"',
+        "total_invoice_amount": r'"total_invoice_amount"\s*:\s*(?:")?([^",}]*)(?:")?',
         "seller_details_present": r'"seller_details_present"\s*:\s*(true|false|True|False)',
         "buyer_details_present": r'"buyer_details_present"\s*:\s*(true|false|True|False)',
+        "invoice_date_present": r'"invoice_date_present"\s*:\s*(true|false|True|False)',
+        "invoice_due_date_present": r'"invoice_due_date_present"\s*:\s*(true|false|True|False)',
+        "total_tax_details_present": r'"total_tax_details_present"\s*:\s*(true|false|True|False)',
+        "total_charges_present": r'"total_charges_present"\s*:\s*(true|false|True|False)',
+        "total_discount_present": r'"total_discount_present"\s*:\s*(true|false|True|False)',
+        "amount_paid_present": r'"amount_paid_present"\s*:\s*(true|false|True|False)',
+        "amount_due_present": r'"amount_due_present"\s*:\s*(true|false|True|False)',
     }
-    extracted = DEFAULT_INVOICE_METADATA.copy()
+    metadata = DEFAULT_INVOICE_METADATA.copy()
     text_lower = text.lower()
     for key, pat in field_patterns.items():
         match = re.search(pat, text_lower)
@@ -111,11 +125,18 @@ def extract_invoice_metadata(text: str) -> dict[str, str | bool]:
                 "line_items_present",
                 "seller_details_present",
                 "buyer_details_present",
+                "invoice_date_present",
+                "invoice_due_date_present",
+                "total_tax_details_present",
+                "total_charges_present",
+                "total_discount_present",
+                "amount_paid_present",
+                "amount_due_present",
             ]:
-                extracted[key] = val.lower() == "true"
+                metadata[key] = val.lower() == "true"
             else:
-                extracted[key] = val
-    return extracted
+                metadata[key] = val
+    return metadata
 
 
 def model_factory(model_name: str, provider: str = "openai") -> object:

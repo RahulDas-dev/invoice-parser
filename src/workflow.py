@@ -86,10 +86,14 @@ class PageGrouperNode(BaseNode[WorkflowState, None]):
     async def run(self, ctx: GraphRunContext[WorkflowState, None]) -> PageFormatterNode:
         logger.info("Running Page Grouping")
         agent = PageGroupper(config)
-        page_metadata = {
-            f"P{p_data.page_index}": p_data.metadata
-            for p_data in ctx.state.page_details
-        }
+        page_metadata = {}
+        for p_data in ctx.state.page_details:
+            if "NO_INVOICE_FOUND" in p_data.text_content:
+                logger.info(
+                    f"Skipped the page {p_data.page_index} content - {p_data.text_content}"
+                )
+                continue
+            page_metadata[f"P{p_data.page_index}"] = p_data.metadata
         page_index = "-".join([p_data.page_index for p_data in ctx.state.page_details])
         page_group_info, token_expenditure = await agent.run(
             page_metadata=page_metadata, page_no=page_index

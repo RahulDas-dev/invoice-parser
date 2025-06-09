@@ -2,22 +2,22 @@ import asyncio
 from asyncio.log import logger
 
 from pydantic_ai import Agent
-from output_format import Invoice
-from state import TokenCount
-from utility import model_factory
+from src.output_format import Invoice
+from src.state import TokenCount
+from src.utility import model_factory
 from .messages import (
     MP_FORMATOR_SYSTEM_MESSAGE,
     SP_FORMATOR_SYSTEM_MESSAGE,
     MP_FORMATOR_USER_MESSAGE,
     SP_FORMATOR_USER_MESSAGE,
 )
-from config import InvoiceParserConfig
+from src.config import InvoiceParserConfig
 
 
 class SinglePageFormator:
     def __init__(self, config: InvoiceParserConfig):
         self.config = config
-        self.semaphore = asyncio.Semaphore(config.max_concurrent_request)
+        self.semaphore = asyncio.Semaphore(config.MAX_CONCURRENT_REQUEST)
 
     async def run(
         self, page_details: list[tuple[str, dict, int]]

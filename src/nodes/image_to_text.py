@@ -3,8 +3,8 @@ from asyncio.log import logger
 from pathlib import Path
 
 from pydantic_ai import Agent, BinaryContent
-from state import TokenCount
-from utility import (
+from src.state import TokenCount
+from src.utility import (
     extract_invoice_metadata,
     extract_json_from_text,
     image_to_byte_string,
@@ -17,22 +17,21 @@ from .messages import (
     IMAGE_TO_TEXT_SYSTEM_MESSAGE,
     IMAGE_TO_TEXT_USER_MESSAGE,
 )
-from config import InvoiceParserConfig
+from src.config import InvoiceParserConfig
 
 
 class ImageToTextConverter:
     def __init__(self, config: InvoiceParserConfig):
-        self.config = config
-        self.semaphore = asyncio.Semaphore(config.max_concurrent_request)
+        self.model_name = config.MODEL1_NAME
+        self.semaphore = asyncio.Semaphore(config.MAX_CONCURRENT_REQUEST)
+        self.image_ext = config.IMG_SAVE_FORMAT
 
-    async def run(self, image_path: Path) -> list[tuple[int, str, dict, TokenCount]]:
+    async def run(self, image_dir: Path) -> list[tuple[int, str, dict, TokenCount]]:
         """
         Process the image and return a text description.
         """
         agent = Agent(
-            model=model_factory(
-                model_name=self.config.model1_name, provider="aws_bedrock"
-            ),
+            model=model_factory(model_name=self.model_name, provider="aws_bedrock"),
             system_prompt=IMAGE_TO_TEXT_SYSTEM_MESSAGE,
             output_type=str,
             retries=0,
@@ -52,12 +51,11 @@ class ImageToTextConverter:
                 result = await agent.run(user_prompt=input_msg)
                 return result, image_path, page_no
 
-        task_list = [
-            run_agent(img_path, page_no)
-            for img_path, page_no in sorted_images(
-                image_path, image_ext=self.config.image_ext
-            )
-        ]
+        task_list = []
+        async for img_path, page_no in sorted_images(
+            image_dir, image_ext=self.image_ext
+        ):
+            task_list.append(run_agent(img_path, page_no))
         try:
             agent_response = await asyncio.gather(*task_list)
         except Exception as err:
@@ -71,8 +69,8 @@ class ImageToTextConverter:
             )
             text_content = replace_json_from_text(agent_res.output)
             token_expense = TokenCount(
-                model_name=self.config.model1_name,
-                page_no=page_no,
+                model_name=self.model_name,
+                page_no=str(page_no),
                 request_tokens=agent_res.usage().request_tokens,
                 response_tokens=agent_res.usage().response_tokens,
             )

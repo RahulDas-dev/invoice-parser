@@ -4,19 +4,19 @@ import json
 from typing import Any, Mapping
 
 from pydantic_ai import Agent
-from state import TokenCount
-from utility import (
+from src.state import TokenCount
+from src.utility import (
     extract_json_from_text,
     model_factory,
 )
 from .messages import PAGE_GROUPPER_SYSTEM_MESSAGE, PAGE_GROUPPER_USER_MESSAGE
-from config import InvoiceParserConfig
+from src.config import InvoiceParserConfig
 
 
 class PageGroupper:
     def __init__(self, config: InvoiceParserConfig):
-        self.config = config
-        self.semaphore = asyncio.Semaphore(config.max_concurrent_request)
+        self.model_name = config.MODEL2_NAME
+        self.semaphore = asyncio.Semaphore(config.MAX_CONCURRENT_REQUEST)
 
     async def run(
         self, page_metadata: Mapping[str, Any], page_no: str
@@ -25,11 +25,11 @@ class PageGroupper:
         Process the image and return a text description.
         """
         agent = Agent[None, str](
-            model=model_factory(model_name=self.config.model1_name, provider="openai"),
+            model=model_factory(model_name=self.model_name, provider="openai"),
             system_prompt=PAGE_GROUPPER_SYSTEM_MESSAGE,
             output_type=str,
             retries=0,
-            model_settings={"temperature": 0},
+            model_settings={"temperature": 1},
         )
 
         message = PAGE_GROUPPER_USER_MESSAGE.substitute(
