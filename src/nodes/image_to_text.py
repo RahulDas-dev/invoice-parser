@@ -13,7 +13,6 @@ from src.utility import (
     sorted_images,
 )
 from .messages import (
-    IMAGE_TO_TEXT_PAGE_TEMPLATE,
     IMAGE_TO_TEXT_SYSTEM_MESSAGE,
     IMAGE_TO_TEXT_USER_MESSAGE,
 )
@@ -22,11 +21,13 @@ from src.config import InvoiceParserConfig
 
 class ImageToTextConverter:
     def __init__(self, config: InvoiceParserConfig):
-        self.model_name = config.MODEL1_NAME
+        self.model_name = config.IMAGE_TO_TEXT_MODEL
         self.semaphore = asyncio.Semaphore(config.MAX_CONCURRENT_REQUEST)
         self.image_ext = config.IMG_SAVE_FORMAT
 
-    async def run(self, image_dir: Path) -> list[tuple[int, str, dict, TokenCount]]:
+    async def run(
+        self, image_dir: Path | str
+    ) -> list[tuple[int, str, dict, TokenCount]]:
         """
         Process the image and return a text description.
         """
@@ -62,7 +63,7 @@ class ImageToTextConverter:
             logger.error(f"Error in Image To Text Converter Agent Response - {err!s}")
             return None
         outputs = []
-        for agent_res, image_path, page_no in agent_response:
+        for agent_res, _, page_no in agent_response:
             json_string = extract_json_from_text(agent_res.output)
             page_metadata = (
                 extract_invoice_metadata(json_string) if json_string is not None else {}
@@ -74,9 +75,5 @@ class ImageToTextConverter:
                 request_tokens=agent_res.usage().request_tokens,
                 response_tokens=agent_res.usage().response_tokens,
             )
-            page_content = IMAGE_TO_TEXT_PAGE_TEMPLATE.substitute(
-                PAGE_NO=page_no,
-                PAGE_CONTENT=text_content,
-            )
-            outputs.append((page_no, page_content, page_metadata, token_expense))
+            outputs.append((page_no, text_content, page_metadata, token_expense))
         return outputs

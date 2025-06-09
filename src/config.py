@@ -26,9 +26,14 @@ class FeatureConfig(BaseSettings):
     MAX_IMG_HEIGHT: PositiveInt = Field(
         description="Maximum image height", default=2500
     )
-    MODEL1_NAME: str = Field(default="us.meta.llama4-maverick-17b-instruct-v1:0")
-    MODEL2_NAME: str = Field(default="o4-mini-2025-04-16")
-    MODEL3_NAME: str = Field(default="gpt-4o-mini")
+    IMAGE_TO_TEXT_MODEL: str = Field(
+        default="us.meta.llama4-maverick-17b-instruct-v1:0"
+    )
+    PAGE_GROUPPER_MODEL: str = Field(default="o4-mini-2025-04-16")
+    OUTPUT_FORMATOR_MODEL: str = Field(default="gpt-4o-mini")
+    PAGE_AGGREGATOR_MODEL: str = Field(
+        default="us.meta.llama4-maverick-17b-instruct-v1:0"
+    )
     MAX_CONCURRENT_REQUEST: PositiveInt = Field(
         description="Maximum number of calls to the Agents", default=10
     )

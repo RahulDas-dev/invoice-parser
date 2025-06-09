@@ -107,11 +107,6 @@ Kindly Note - If the document is not an invoice Document, return the reserved ke
 """
 IMAGE_TO_TEXT_USER_MESSAGE = "Please extract the invoice details from the image."
 
-IMAGE_TO_TEXT_PAGE_TEMPLATE = Template("""
-Page No $PAGE_NO
-
-$PAGE_CONTENT
-""")
 
 PAGE_GROUPPER_SYSTEM_MESSAGE = """
 You are an expert at grouping pages into invoices based solely on six metadata flags per page:

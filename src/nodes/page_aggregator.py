@@ -13,9 +13,9 @@ from .messages import PAGE_GROUPPER_SYSTEM_MESSAGE, PAGE_GROUPPER_USER_MESSAGE
 from src.config import InvoiceParserConfig
 
 
-class PageGroupper:
+class PageAggregator:
     def __init__(self, config: InvoiceParserConfig):
-        self.model_name = config.PAGE_GROUPPER_MODEL
+        self.model_name = config.PAGE_AGGREGATOR_MODEL
         self.semaphore = asyncio.Semaphore(config.MAX_CONCURRENT_REQUEST)
 
     async def run(

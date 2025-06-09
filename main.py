@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from pathlib import Path
+from pprint import pprint
 from src.config import config
 from dotenv import load_dotenv
 
@@ -44,12 +45,21 @@ async def run_page_groupper():
     page_metadata = {
         f"P{page_index}": metadata for page_index, _, metadata, _ in page_data
     }
+    pprint(page_metadata)
     page_no = "-".join([str(page_index) for page_index, _, _, _ in page_data])
     groupper = PageGroupper(config)
     group_meta, t_count = await groupper.run(page_metadata, page_no)
-    logging.info(f"Group MetaData: {group_meta}")
+    pprint(group_meta)
     return None
 
 
+async def run_end2end_workflow():
+    from src.workflow import run_workflow
+
+    result = await run_workflow(Path("Invoice-Copy-20.pdf"))
+    logging.info(f"Workflow Result: {result}")
+    return result
+
+
 if __name__ == "__main__":
-    asyncio.run(run_page_groupper())
+    asyncio.run(run_end2end_workflow())

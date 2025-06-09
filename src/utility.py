@@ -73,8 +73,17 @@ def replace_json_from_text(text: str) -> str:
         The modified string with JSON-like content replaced by a placeholder
     """
     json_pattern = r"```(?:json)?\s*\{.*?\}\s*```"
+    pattern1 = r"^\s*#+\s*structured text output\s*$\n?"
+    pattern2 = r"^\s*#+\s*json output\s*$\n?"
     # json_pattern = r"(?i)```json\s*{.*?}\s*```"
-    return re.sub(json_pattern, "", text, flags=re.DOTALL | re.IGNORECASE)
+    cleaned_text = re.sub(json_pattern, "", text, flags=re.DOTALL | re.IGNORECASE)
+    cleaned_text = re.sub(
+        pattern1, "", cleaned_text, flags=re.MULTILINE | re.IGNORECASE
+    )
+    cleaned_text = re.sub(
+        pattern2, "", cleaned_text, flags=re.MULTILINE | re.IGNORECASE
+    )
+    return cleaned_text.strip()
 
 
 DEFAULT_INVOICE_METADATA = {

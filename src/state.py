@@ -1,6 +1,7 @@
 from collections.abc import Mapping
 import logging
 import re
+from string import Template
 from typing import Any
 from pydantic import BaseModel, Field
 from src.output_format import Invoice
@@ -8,13 +9,42 @@ from src.output_format import Invoice
 
 logger = logging.getLogger(__name__)
 
+IMAGE_TO_TEXT_PAGE_TEMPLATE = Template("""
+Page No $PAGE_NO
+
+$PAGE_CONTENT
+""")
+
 
 class PageDetails(BaseModel):
     page_index: int
     image_path: str
     image_size: tuple[int, int] = Field(default_factory=lambda: (0, 0))
-    text_content: str | None = None
+    text_content: str = Field(default="")
     metadata: Mapping[str, Any] = Field(default_factory=dict)
+
+    @property
+    def is_invoice_page(self) -> bool:
+        """Check if the page contains invoice data."""
+        return (
+            bool(self.text_content)
+            and "NO_INVOICE_FOUND" not in self.text_content
+            and len(self.metadata) > 0
+        )
+
+    @property
+    def invoice_number(self) -> str | None:
+        """Extract the invoice number from the metadata."""
+        invoice_number = self.metadata.get("invoice_number", "")
+        return (
+            None if invoice_number.lower() in ["", "not_available"] else invoice_number
+        )
+
+    def append_page_no(self) -> str:
+        return IMAGE_TO_TEXT_PAGE_TEMPLATE.substitute(
+            PAGE_NO=self.page_index,
+            PAGE_CONTENT=self.text_content,
+        )
 
 
 class TokenCount(BaseModel):
@@ -60,6 +90,7 @@ class PageGroupInfo(BaseModel):
 
 class WorkflowState(BaseModel):
     pdf_name: str
+    image_dir: str = ""
     page_details: list[PageDetails] = []
     page_group_info: list[PageGroup] = []
     token_count: list[TokenCount] = []
@@ -83,3 +114,13 @@ class WorkflowState(BaseModel):
         else:
             page_group_content = pages_content[0] if pages_content else ""
         return page_group_content
+
+    def valid_invoice_count(self) -> int:
+        """Count the number of valid invoices in the final output."""
+        return sum(1 for invoice in self.page_details if invoice.is_invoice_page)
+
+    def unique_invoice_count(self) -> int:
+        """Get a set of unique invoice numbers from the page details."""
+        return sum(
+            1 for p_data in self.page_details if p_data.invoice_number is not None
+        )

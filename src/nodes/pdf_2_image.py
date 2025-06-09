@@ -1,5 +1,5 @@
 import asyncio
-import logging
+from asyncio.log import logger
 from pathlib import Path
 
 import pypdfium2 as pdfium
@@ -7,8 +7,6 @@ from pypdfium2._helpers import PdfBitmap
 
 from src.config import InvoiceParserConfig
 from src.utility import async_range
-
-logger = logging.getLogger(__name__)
 
 
 class Pdf2ImgConverter:
