@@ -1,16 +1,36 @@
+import asyncio
 import io
 import os
 from pathlib import Path
 import re
+from typing import AsyncGenerator
 from PIL import Image
 
 
-def get_secret_keys() -> dict:
+def get_aws_keys() -> dict:
     return {
         "aws_access_key_id": os.getenv("AWS_ACCESS_KEY"),
         "aws_secret_access_key": os.getenv("AWS_SECRET_KEY"),
         "region_name": os.getenv("REGION_NAME"),
     }
+
+
+def extract_page_no(file: Path, image_ext: str = "png") -> tuple[str, int]:
+    match = re.search(rf"Page_(\d+)\.{image_ext}", file.name)
+    return str(file), int(match.group(1) if match else 10e5)
+
+
+async def sorted_images(
+    image_dir: str | Path, image_ext: str = "png"
+) -> AsyncGenerator[tuple[Path, int], None]:
+    """Yields image files and their page numbers, sorted by page number."""
+    image_files = list(Path(image_dir).rglob(f"*.{image_ext}"))
+
+    for img_path, page_no in sorted(
+        map(extract_page_no, image_files), key=lambda x: x[1]
+    ):
+        await asyncio.sleep(0)  # Small sleep to make this a true async generator
+        yield img_path, page_no
 
 
 def image_to_byte_string(image_path: str | Path) -> tuple[bytes, str]:
@@ -34,6 +54,20 @@ def extract_json_from_text(text: str) -> str | None:
     json_pattern = r"```(?:json)?\s*(\{.*?\})\s*```"
     match = re.search(json_pattern, text, re.DOTALL | re.IGNORECASE)
     return match.group(1) if match else None
+
+
+def replace_json_from_text(text: str) -> str:
+    """
+    Replace JSON-like content in a string with a placeholder.
+
+    Args:
+        text: The input string containing JSON-like content
+    Returns:
+        The modified string with JSON-like content replaced by a placeholder
+    """
+    json_pattern = r"```(?:json)?\s*\{.*?\}\s*```"
+    # json_pattern = r"(?i)```json\s*{.*?}\s*```"
+    return re.sub(json_pattern, "", text, flags=re.DOTALL | re.IGNORECASE)
 
 
 DEFAULT_INVOICE_METADATA = {
@@ -82,3 +116,30 @@ def extract_invoice_metadata(text: str) -> dict[str, str | bool]:
             else:
                 extracted[key] = val
     return extracted
+
+
+def model_factory(model_name: str, provider: str = "openai") -> object:
+    """
+    Factory function to create a model instance based on the model name and provider.
+
+    Args:
+        model_name: The name of the model to instantiate.
+        provider: The provider of the model (default is "openai").
+
+    Returns:
+        An instance of the specified model.
+    """
+    if provider == "aws_bedrock":
+        from pydantic_ai.models.bedrock import BedrockConverseModel
+        from pydantic_ai.providers.bedrock import BedrockProvider
+
+        return BedrockConverseModel(
+            model_name=model_name,
+            provider=BedrockProvider(**get_aws_keys()),
+        )
+    elif provider == "openai":
+        from pydantic_ai.models.openai import OpenAIModel
+
+        return OpenAIModel(model_name=model_name)
+    else:
+        raise ValueError(f"Unsupported provider: {provider}")

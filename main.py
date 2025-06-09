@@ -1,7 +1,7 @@
 import logging
 from src.config import config
 
-from src.pdf_2_image import Pdf2ImgConverter
+from nodes.pdf_2_image import Pdf2ImgConverter
 
 logging.basicConfig(
     level=logging.INFO,
