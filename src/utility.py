@@ -1,10 +1,11 @@
 import asyncio
-from collections.abc import Mapping
 import io
 import os
-from pathlib import Path
 import re
+from collections.abc import Mapping
+from pathlib import Path
 from typing import AsyncGenerator
+
 from PIL import Image
 
 
@@ -27,15 +28,11 @@ def extract_page_no(file: Path, image_ext: str = "png") -> tuple[Path, int]:
     return file, int(match.group(1) if match else 10e5)
 
 
-async def sorted_images(
-    image_dir: str | Path, image_ext: str = "png"
-) -> AsyncGenerator[tuple[Path, int], None]:
+async def sorted_images(image_dir: str | Path, image_ext: str = "png") -> AsyncGenerator[tuple[Path, int], None]:
     """Yields image files and their page numbers, sorted by page number."""
     image_files = list(Path(image_dir).rglob(f"*.{image_ext}"))
 
-    for img_path, page_no in sorted(
-        map(extract_page_no, image_files), key=lambda x: x[1]
-    ):
+    for img_path, page_no in sorted(map(extract_page_no, image_files), key=lambda x: x[1]):
         await asyncio.sleep(0)  # Small sleep to make this a true async generator
         yield img_path, page_no
 
@@ -77,12 +74,8 @@ def replace_json_from_text(text: str) -> str:
     pattern2 = r"^\s*#+\s*json output\s*$\n?"
     # json_pattern = r"(?i)```json\s*{.*?}\s*```"
     cleaned_text = re.sub(json_pattern, "", text, flags=re.DOTALL | re.IGNORECASE)
-    cleaned_text = re.sub(
-        pattern1, "", cleaned_text, flags=re.MULTILINE | re.IGNORECASE
-    )
-    cleaned_text = re.sub(
-        pattern2, "", cleaned_text, flags=re.MULTILINE | re.IGNORECASE
-    )
+    cleaned_text = re.sub(pattern1, "", cleaned_text, flags=re.MULTILINE | re.IGNORECASE)
+    cleaned_text = re.sub(pattern2, "", cleaned_text, flags=re.MULTILINE | re.IGNORECASE)
     return cleaned_text.strip()
 
 
@@ -167,9 +160,8 @@ def model_factory(model_name: str, provider: str = "openai") -> object:
             model_name=model_name,
             provider=BedrockProvider(**get_aws_keys()),
         )
-    elif provider == "openai":
+    if provider == "openai":
         from pydantic_ai.models.openai import OpenAIModel
 
         return OpenAIModel(model_name=model_name)
-    else:
-        raise ValueError(f"Unsupported provider: {provider}")
+    raise ValueError(f"Unsupported provider: {provider}")

@@ -1,16 +1,18 @@
 import asyncio
-from asyncio.log import logger
 import json
+from asyncio.log import logger
 from typing import Any, Mapping
 
 from pydantic_ai import Agent
+
+from src.config import InvoiceParserConfig
 from src.state import TokenCount
 from src.utility import (
     extract_json_from_text,
     model_factory,
 )
+
 from .messages import PAGE_GROUPPER_SYSTEM_MESSAGE, PAGE_GROUPPER_USER_MESSAGE
-from src.config import InvoiceParserConfig
 
 
 class PageGroupper:
@@ -18,9 +20,7 @@ class PageGroupper:
         self.model_name = config.PAGE_GROUPPER_MODEL
         self.semaphore = asyncio.Semaphore(config.MAX_CONCURRENT_REQUEST)
 
-    async def run(
-        self, page_metadata: Mapping[str, Any], page_no: str
-    ) -> tuple[Mapping[str, Any], TokenCount | None]:
+    async def run(self, page_metadata: Mapping[str, Any], page_no: str) -> tuple[Mapping[str, Any], TokenCount | None]:
         """
         Process the image and return a text description.
         """
@@ -32,9 +32,7 @@ class PageGroupper:
             model_settings={"temperature": 1},
         )
 
-        message = PAGE_GROUPPER_USER_MESSAGE.substitute(
-            PAGE_METADATA=str(page_metadata)
-        )
+        message = PAGE_GROUPPER_USER_MESSAGE.substitute(PAGE_METADATA=str(page_metadata))
         try:
             agent_response = await agent.run(user_prompt=message)
             if agent_response.output in [None, ""]:

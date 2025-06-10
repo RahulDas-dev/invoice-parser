@@ -1,18 +1,16 @@
-from dataclasses import dataclass
 from asyncio.log import logger
+from dataclasses import dataclass
+
 from pydantic_graph import BaseNode, End, Graph, GraphRunContext
 
+from src.config import config
 from src.nodes import (
     ImageToTextConverter,
-    MultiPageFormator,
-    SinglePageFormator,
     PageGroupper,
     Pdf2ImgConverter,
+    SinglePageFormator,
 )
-from src.config import config
 from src.output_format import Invoice
-from src.utility import extract_page_no
-
 from src.state import (
     PageDetails,
     PageGroup,
@@ -24,13 +22,11 @@ from src.state import (
 class PageFormatterNode(BaseNode[WorkflowState, None, list[Invoice]]):
     task_type: str = "simple"
 
-    async def _simple_run(
-        self, ctx: GraphRunContext[WorkflowState, None]
-    ) -> End[list[Invoice]]:
+    async def run(self, ctx: GraphRunContext[WorkflowState, None]) -> End[list[Invoice]]:
         page_formatter = SinglePageFormator(config)
         response = await page_formatter.run(
             [
-                (p_data.page_index, p_data.text_content, p_data.metadata)
+                (p_data.page_index, p_data.append_page_no(), p_data.metadata)
                 for p_data in ctx.state.page_details
                 if p_data.is_invoice_page
             ]
@@ -40,54 +36,6 @@ class PageFormatterNode(BaseNode[WorkflowState, None, list[Invoice]]):
             ctx.state.final_output.append(invoice)
         return End(data=ctx.state.final_output)
 
-    async def _complex_run(
-        self, ctx: GraphRunContext[WorkflowState, None]
-    ) -> End[list[Invoice]]:
-        singlepage_invoice_index = [
-            group.pages[0]
-            for group in ctx.state.page_group_info
-            if group.is_single_page
-        ]
-
-        multipage_invoice_index = [
-            group.pages[0] for group in ctx.state.page_group_info if group.is_multi_page
-        ]
-        if singlepage_invoice_index:
-            spage_formatter = SinglePageFormator(config)
-            response = await spage_formatter.run(
-                [
-                    (p_data.page_no, p_data.text_content, p_data.metadata)
-                    for p_data in ctx.state.page_details
-                    if p_data.page_index in singlepage_invoice_index
-                ]
-            )
-            for invoice, t_count in response:
-                ctx.state.token_count.append(t_count)
-                ctx.state.final_output.append(invoice)
-
-        if multipage_invoice_index:
-            mpage_formatter = MultiPageFormator(config)
-            response = await mpage_formatter.run(
-                [
-                    (p_data.page_no, p_data.append_page_no(), p_data.metadata)
-                    for p_data in ctx.state.page_details
-                    if p_data.page_index in multipage_invoice_index
-                ]
-            )
-            for invoice, t_count in response:
-                ctx.state.token_count.append(t_count)
-                ctx.state.final_output.append(invoice)
-
-        return End(output=ctx.state.final_output)
-
-    async def run(
-        self, ctx: GraphRunContext[WorkflowState, None]
-    ) -> End[list[Invoice]]:
-        if self.task_type == "simple":
-            return await self._simple_run(ctx)
-        elif self.task_type == "complex":
-            return await self._complex_run(ctx)
-
 
 @dataclass
 class PageGrouperNode(BaseNode[WorkflowState, None]):
@@ -95,14 +43,10 @@ class PageGrouperNode(BaseNode[WorkflowState, None]):
         logger.info("Running Page Grouping")
         agent = PageGroupper(config)
         page_metadata = {
-            f"P{p_data.page_index}": p_data.metadata
-            for p_data in ctx.state.page_details
-            if p_data.is_invoice_page
+            f"P{p_data.page_index}": p_data.metadata for p_data in ctx.state.page_details if p_data.is_invoice_page
         }
         page_index = "-".join([p_data.page_index for p_data in ctx.state.page_details])
-        page_group_info, token_expenditure = await agent.run(
-            page_metadata=page_metadata, page_no=page_index
-        )
+        page_group_info, token_expenditure = await agent.run(page_metadata=page_metadata, page_no=page_index)
         ctx.state.token_count.append(token_expenditure)
         logger.info(f"Page Grouping Result: {page_group_info!s}")
         for key, value in page_group_info.items():
@@ -114,14 +58,12 @@ class PageGrouperNode(BaseNode[WorkflowState, None]):
                     details=value.get("details", {}),
                 )
             )
-        return PageFormatterNode(task_type="complex")
+        return PageFormatterNode()
 
 
 @dataclass
 class TextExtractionNode(BaseNode[WorkflowState, None]):
-    async def run(
-        self, ctx: GraphRunContext[WorkflowState, None]
-    ) -> End[str] | PageFormatterNode | PageGrouperNode:
+    async def run(self, ctx: GraphRunContext[WorkflowState, None]) -> End[str] | PageFormatterNode | PageGrouperNode:
         agent = ImageToTextConverter(config)
         agent_response = await agent.run(ctx.state.image_dir)
 
@@ -144,9 +86,7 @@ class TextExtractionNode(BaseNode[WorkflowState, None]):
 class PdfToImageNode(BaseNode[WorkflowState, None]):
     input_task: str = "pdf_to_image"
 
-    async def run(
-        self, ctx: GraphRunContext[WorkflowState, None]
-    ) -> TextExtractionNode:
+    async def run(self, ctx: GraphRunContext[WorkflowState, None]) -> TextExtractionNode:
         converter = Pdf2ImgConverter(config)
         image_directort, page_details = await converter.run(ctx.state.pdf_name)
         ctx.state.image_dir = image_directort
@@ -158,13 +98,10 @@ class PdfToImageNode(BaseNode[WorkflowState, None]):
                     image_size=img_size,
                 )
             ]
-
         return TextExtractionNode()
 
 
-workflow = Graph(
-    nodes=[PdfToImageNode, TextExtractionNode, PageGrouperNode, PageFormatterNode]
-)
+workflow = Graph(nodes=[PdfToImageNode, TextExtractionNode, PageGrouperNode, PageFormatterNode])
 
 
 async def run_workflow(pdf_name: str) -> WorkflowState:

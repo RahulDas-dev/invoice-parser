@@ -281,7 +281,7 @@ Extract the invoice details from the text content and metadata JSON provided bel
 
 ## Text Content
 $PAGE_CONTENT
-                                         
-## JSON Metadata                                         
+
+## JSON Metadata
 $PAGE_METADATA
 """)

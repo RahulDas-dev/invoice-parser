@@ -1,11 +1,12 @@
-from collections.abc import Mapping
 import logging
 import re
+from collections.abc import Mapping
 from string import Template
 from typing import Any
-from pydantic import BaseModel, Field
-from src.output_format import Invoice
 
+from pydantic import BaseModel, Field
+
+from src.output_format import Invoice
 
 logger = logging.getLogger(__name__)
 
@@ -26,19 +27,13 @@ class PageDetails(BaseModel):
     @property
     def is_invoice_page(self) -> bool:
         """Check if the page contains invoice data."""
-        return (
-            bool(self.text_content)
-            and "NO_INVOICE_FOUND" not in self.text_content
-            and len(self.metadata) > 0
-        )
+        return bool(self.text_content) and "NO_INVOICE_FOUND" not in self.text_content and len(self.metadata) > 0
 
     @property
     def invoice_number(self) -> str | None:
         """Extract the invoice number from the metadata."""
         invoice_number = self.metadata.get("invoice_number", "")
-        return (
-            None if invoice_number.lower() in ["", "not_available"] else invoice_number
-        )
+        return None if invoice_number.lower() in ["", "not_available"] else invoice_number
 
     def append_page_no(self) -> str:
         return IMAGE_TO_TEXT_PAGE_TEMPLATE.substitute(
@@ -104,11 +99,7 @@ class WorkflowState(BaseModel):
     def get_text_content_for_group(self, group_index: int) -> str:
         """Get the concatenated text content for a specific group."""
         group = self.page_group_info[group_index]
-        pages_content = [
-            p_data.text_content
-            for p_data in self.page_details
-            if p_data.page_index in group.pages
-        ]
+        pages_content = [p_data.text_content for p_data in self.page_details if p_data.page_index in group.pages]
         if group.is_multi_page:
             page_group_content = "\n".join(pages_content)
         else:
@@ -121,6 +112,4 @@ class WorkflowState(BaseModel):
 
     def unique_invoice_count(self) -> int:
         """Get a set of unique invoice numbers from the page details."""
-        return sum(
-            1 for p_data in self.page_details if p_data.invoice_number is not None
-        )
+        return sum(1 for p_data in self.page_details if p_data.invoice_number is not None)

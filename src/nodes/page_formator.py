@@ -2,16 +2,18 @@ import asyncio
 from asyncio.log import logger
 
 from pydantic_ai import Agent
+
+from src.config import InvoiceParserConfig
 from src.output_format import Invoice
 from src.state import TokenCount
 from src.utility import model_factory
+
 from .messages import (
     MP_FORMATOR_SYSTEM_MESSAGE,
-    SP_FORMATOR_SYSTEM_MESSAGE,
     MP_FORMATOR_USER_MESSAGE,
+    SP_FORMATOR_SYSTEM_MESSAGE,
     SP_FORMATOR_USER_MESSAGE,
 )
-from src.config import InvoiceParserConfig
 
 
 class SinglePageFormator:
@@ -19,9 +21,7 @@ class SinglePageFormator:
         self.model_name = config.OUTPUT_FORMATOR_MODEL
         self.semaphore = asyncio.Semaphore(config.MAX_CONCURRENT_REQUEST)
 
-    async def run(
-        self, page_details: list[tuple[int, str, dict]]
-    ) -> list[tuple[Invoice, TokenCount]]:
+    async def run(self, page_details: list[tuple[int, str, dict]]) -> list[tuple[Invoice, TokenCount]]:
         """
         Process the image and return a text description.
         """
@@ -33,23 +33,16 @@ class SinglePageFormator:
             model_settings={"temperature": 0},
         )
 
-        async def run_agent(
-            text_content: str, page_no: int
-        ) -> tuple[Invoice, TokenCount]:
+        async def run_agent(text_content: str, page_no: int) -> tuple[Invoice, TokenCount]:
             async with self.semaphore:
-                logger.info(
-                    f"SinglePageFormator Agent Processing Page : {page_no} : {text_content}"
-                )
+                logger.info(f"SinglePageFormator Agent Processing Page : {page_no} : {text_content}")
                 input_msg = SP_FORMATOR_USER_MESSAGE.substitute(
                     PAGE_CONTENT=text_content,
                 )
                 result = await agent.run(user_prompt=input_msg)
                 return result, page_no
 
-        task_list = [
-            run_agent(text_content, page_no)
-            for (page_no, text_content, _) in page_details
-        ]
+        task_list = [run_agent(text_content, page_no) for (page_no, text_content, _) in page_details]
         try:
             agent_response = await asyncio.gather(*task_list)
         except Exception as err:
@@ -73,9 +66,7 @@ class MultiPageFormator:
         self.model_name = config.PAGE_GROUPPER_MODEL
         self.semaphore = asyncio.Semaphore(config.max_concurrent_request)
 
-    async def run(
-        self, page_details: list[tuple[str, dict, str]]
-    ) -> list[tuple[Invoice, TokenCount]]:
+    async def run(self, page_details: list[tuple[str, dict, str]]) -> list[tuple[Invoice, TokenCount]]:
         """
         Process the image and return a text description.
         """
@@ -87,13 +78,9 @@ class MultiPageFormator:
             model_settings={"temperature": 0},
         )
 
-        async def run_agent(
-            text_content: str, metadata: dict, page_no: str
-        ) -> tuple[Invoice, TokenCount]:
+        async def run_agent(text_content: str, metadata: dict, page_no: str) -> tuple[Invoice, TokenCount]:
             async with self.semaphore:
-                logger.info(
-                    f"Image To Text Converter Agent Processing Page : {page_no} : {text_content}"
-                )
+                logger.info(f"Image To Text Converter Agent Processing Page : {page_no} : {text_content}")
                 input_msg = MP_FORMATOR_USER_MESSAGE.substitute(
                     PAGE_CONTENT=text_content,
                     PAGE_METADATA=metadata,
@@ -101,10 +88,7 @@ class MultiPageFormator:
                 result = await agent.run(user_prompt=input_msg)
                 return result, page_no
 
-        task_list = [
-            run_agent(text_content, metadata, page_no)
-            for (text_content, metadata, page_no) in page_details
-        ]
+        task_list = [run_agent(text_content, metadata, page_no) for (text_content, metadata, page_no) in page_details]
         try:
             agent_response = await asyncio.gather(*task_list)
         except Exception as err:

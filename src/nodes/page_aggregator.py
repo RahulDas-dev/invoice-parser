@@ -1,55 +1,84 @@
-import asyncio
 from asyncio.log import logger
-import json
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
-from pydantic_ai import Agent
-from src.state import TokenCount
-from src.utility import (
-    extract_json_from_text,
-    model_factory,
-)
-from .messages import PAGE_GROUPPER_SYSTEM_MESSAGE, PAGE_GROUPPER_USER_MESSAGE
-from src.config import InvoiceParserConfig
+from config import InvoiceParserConfig
+from output_format import Invoice
 
 
 class PageAggregator:
     def __init__(self, config: InvoiceParserConfig):
-        self.model_name = config.PAGE_AGGREGATOR_MODEL
-        self.semaphore = asyncio.Semaphore(config.MAX_CONCURRENT_REQUEST)
+        self.merger_strategy = config.MERGER_STRATEGY
 
-    async def run(
-        self, page_metadata: Mapping[str, Any], page_no: str
-    ) -> tuple[Mapping[str, Any], TokenCount | None]:
+    async def run(self, invoices: list[Invoice], merger_stratagy: Mapping[str, Any]) -> Invoice:
         """
         Process the image and return a text description.
         """
-        agent = Agent[None, str](
-            model=model_factory(model_name=self.model_name, provider="openai"),
-            system_prompt=PAGE_GROUPPER_SYSTEM_MESSAGE,
-            output_type=str,
-            retries=0,
-            model_settings={"temperature": 1},
-        )
+        logger.info(f"merging {len(invoices)} invoices from Pages {[inv.page_nos for inv in invoices]}")
+        if self.merger_strategy == "classic":
+            merged_invoice = self._classic_merge(invoices)
+        elif self.merger_strategy == "smart":
+            merged_invoice = self._smart_merge(invoices)
+        elif self.merger_strategy == "strategy":
+            merged_invoice = self._merge_with_stratagy(invoices, merger_stratagy)
+        else:
+            raise ValueError(f"Unknown merger strategy: {self.merger_strategy}")
+        return merged_invoice
 
-        message = PAGE_GROUPPER_USER_MESSAGE.substitute(
-            PAGE_METADATA=str(page_metadata)
-        )
-        try:
-            agent_response = await agent.run(user_prompt=message)
-            if agent_response.output in [None, ""]:
-                logger.error(f"Page Groupper response is None for page {page_no}")
-                return {}, None
-            json_string = extract_json_from_text(agent_response.output)
-            json_string_ = agent_response.output if json_string is None else json_string
-            page_group_info = json.loads(json_string_)
-        except Exception as err:
-            logger.error(f"Error processing page {page_no}: {err}")
-            return {}, None
-        token_expenditure = TokenCount(
-            model_name=agent.model.model_name,
-            page_no=page_no,
-            request_tokens=agent_response.usage().request_tokens,
-            response_tokens=agent_response.usage().response_tokens,
-        )
-        return page_group_info, token_expenditure
+    def _classic_merge(self, invoices: list[Invoice]) -> Invoice:
+        """
+        Merge multiple invoice objects that belong to the same invoice number
+        into a single consolidated invoice.
+
+        Args:
+            invoices: List of Invoice objects with the same invoice number
+        Returns:
+            A single merged Invoice object
+        """
+        if not invoices:
+            return Invoice()
+
+        if len(invoices) == 1:
+            return invoices[0]
+
+        merged_invoice = invoices[0]
+        for invoice in invoices[1:]:
+            merged_invoice = merged_invoice.merge_with(invoice)
+
+        return merged_invoice
+
+    def _smart_merge(self, invoices: list["Invoice"]) -> "Invoice":
+        """
+        Smart merge that prioritizes invoices with more complete information.
+        Invoices with more details get higher priority in merging.
+        """
+        if not invoices:
+            return Invoice()
+
+        if len(invoices) == 1:
+            return invoices[0]
+
+        # Sort invoices by completeness (most complete first)
+        sorted_invoices = sorted(invoices, key=lambda x: x.count_available_details(), reverse=True)
+
+        # Start with the most complete invoice
+        result = sorted_invoices[0]
+
+        # Merge with others, preserving the priority of the more complete base
+        for invoice in sorted_invoices[1:]:
+            result = result.merge_with(invoice)
+
+        return result
+
+    def _merge_with_stratagy(self, invoices: list["Invoice"], merger_stratagy: Mapping[str, Any]) -> "Invoice":
+        """
+        Smart merge that prioritizes invoices with more complete information.
+        Invoices with more details get higher priority in merging.
+        """
+        if not invoices:
+            return Invoice()
+
+        if len(invoices) == 1:
+            return invoices[0]
+
+        raise NotImplementedError(f"Smart merge with strategy {merger_stratagy} is not implemented yet.")
