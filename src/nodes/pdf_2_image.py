@@ -27,14 +27,12 @@ class Pdf2ImgConverter:
     async def _convert_to_image_and_save(
         self, page_bitmap: PdfBitmap, page_index: int, output_folder: Path
     ) -> tuple[int, Path, tuple[int, int]]:
-        def process_and_save():
+        def process_and_save() -> tuple[int, Path, tuple[int, int]]:
             pil_image = page_bitmap.to_pil()
             save_format_ = "PNG" if self.save_format == "png" else self.save_format
             save_path = output_folder / f"Page_{page_index:04}.png"
             if not self.resize_ops_enabled:
-                logger.info(
-                    f"Processing Page No {page_index} Images shape {pil_image.size} ..."
-                )
+                logger.info(f"Processing Page No {page_index} Images shape {pil_image.size} ...")
                 new_image = pil_image
                 new_image.save(save_path, save_format_)
             else:
@@ -43,22 +41,16 @@ class Pdf2ImgConverter:
                     new_height = self.max_height
                     new_width = int(new_height * (width / height))
                     new_image = pil_image.resize((new_width, new_height))
-                    logger.info(
-                        f"Processing Page No {page_index} Images shape {new_image.size} ..."
-                    )
+                    logger.info(f"Processing Page No {page_index} Images shape {new_image.size} ...")
                     new_image.save(save_path, save_format_)
                 elif width > height and width > self.max_width:
                     new_width = self.max_width
                     new_height = int(new_width * (height / width))
                     new_image = pil_image.resize((new_width, new_height))
-                    logger.info(
-                        f"Processing Page No {page_index} Images shape {new_image.size} ..."
-                    )
+                    logger.info(f"Processing Page No {page_index} Images shape {new_image.size} ...")
                     new_image.save(save_path, save_format_)
                 else:
-                    logger.info(
-                        f"Processing Page No {page_index} Images shape {pil_image.size} ..."
-                    )
+                    logger.info(f"Processing Page No {page_index} Images shape {pil_image.size} ...")
                     new_image = pil_image
                     new_image = pil_image.save(save_path, save_format_)
             return page_index, save_path, new_image.size
@@ -74,9 +66,7 @@ class Pdf2ImgConverter:
             if not (self.output_path / Path(f"{subfolder}_{count}")).exists():
                 return f"{subfolder}_{count}"
 
-    async def run(
-        self, pdf_name: str | Path
-    ) -> tuple[Path, list[tuple[int, Path, tuple[int, int]]]]:
+    async def run(self, pdf_name: str | Path) -> tuple[Path, list[tuple[int, Path, tuple[int, int]]]]:
         pdf_path = self.input_path / pdf_name
         if not pdf_path.exists():  # type: ignore[reportOptionalMemberAccess]
             logger.info(f"PDF file {pdf_path} does not exist.")

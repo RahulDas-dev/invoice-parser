@@ -5,8 +5,8 @@ from .pdf_2_image import Pdf2ImgConverter
 
 __all__ = [
     "ImageToTextConverter",
-    "SinglePageFormator",
     "MultiPageFormator",
     "PageGroupper",
     "Pdf2ImgConverter",
+    "SinglePageFormator",
 ]

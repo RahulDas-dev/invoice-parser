@@ -15,6 +15,11 @@ class PageAggregator:
         Process the image and return a text description.
         """
         logger.info(f"merging {len(invoices)} invoices from Pages {[inv.page_nos for inv in invoices]}")
+        if not invoices:
+            return Invoice()
+
+        if len(invoices) == 1:
+            return invoices[0]
         if self.merger_strategy == "classic":
             merged_invoice = self._classic_merge(invoices)
         elif self.merger_strategy == "smart":

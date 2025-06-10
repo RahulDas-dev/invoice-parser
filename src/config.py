@@ -1,10 +1,8 @@
-from pathlib import Path
 from enum import Enum
+from pathlib import Path
 
-
-from pydantic import Field, PositiveInt, field_validator, DirectoryPath
-from pydantic_settings import BaseSettings
-from pydantic_settings import SettingsConfigDict
+from pydantic import DirectoryPath, Field, PositiveInt, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Environment(str, Enum):
@@ -19,24 +17,14 @@ class FeatureConfig(BaseSettings):
         description="Allowed extensions for the uploaded files",
         default_factory=lambda: ["pdf", "PDF", "png", "PNG"],
     )
-    IMG_SAVE_FORMAT: str = Field(
-        description="Image save format, default to png", default="png"
-    )
+    IMG_SAVE_FORMAT: str = Field(description="Image save format, default to png", default="png")
     MAX_IMG_WIDTH: PositiveInt = Field(description="Maximum image width", default=2500)
-    MAX_IMG_HEIGHT: PositiveInt = Field(
-        description="Maximum image height", default=2500
-    )
-    IMAGE_TO_TEXT_MODEL: str = Field(
-        default="us.meta.llama4-maverick-17b-instruct-v1:0"
-    )
+    MAX_IMG_HEIGHT: PositiveInt = Field(description="Maximum image height", default=2500)
+    IMAGE_TO_TEXT_MODEL: str = Field(default="us.meta.llama4-maverick-17b-instruct-v1:0")
     PAGE_GROUPPER_MODEL: str = Field(default="o4-mini-2025-04-16")
     OUTPUT_FORMATOR_MODEL: str = Field(default="gpt-4o-mini")
-    PAGE_AGGREGATOR_MODEL: str = Field(
-        default="us.meta.llama4-maverick-17b-instruct-v1:0"
-    )
-    MAX_CONCURRENT_REQUEST: PositiveInt = Field(
-        description="Maximum number of calls to the Agents", default=10
-    )
+    PAGE_AGGREGATOR_MODEL: str = Field(default="us.meta.llama4-maverick-17b-instruct-v1:0")
+    MAX_CONCURRENT_REQUEST: PositiveInt = Field(description="Maximum number of calls to the Agents", default=10)
     OUTPUT_PATH: DirectoryPath = Field(description="Path to the OUTPUT directory")
 
     @field_validator("INPUT_PATH", mode="before")
@@ -48,21 +36,15 @@ class FeatureConfig(BaseSettings):
 
 
 class DeploymentConfig(BaseSettings):
-    APPLICATION_NAME: str = Field(
-        description="Application name", default="invoice-infer"
-    )
+    APPLICATION_NAME: str = Field(description="Application name", default="invoice-infer")
     DEBUG: bool = Field(description="Debug mode", default=False)
-    DEPLOYMENT_ENV: Environment = Field(
-        description="Environment", default=Environment.DEVELOPMENT
-    )
+    DEPLOYMENT_ENV: Environment = Field(description="Environment", default=Environment.DEVELOPMENT)
     TIMEZONE: str = Field(description="Timezone", default="UTC")
     LANGUAGE: str = Field(description="Language", default="en")
 
 
 class InvoiceParserConfig(DeploymentConfig, FeatureConfig):
-    model_config = SettingsConfigDict(
-        env_file=".config", env_file_encoding="utf-8", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".config", env_file_encoding="utf-8", extra="ignore")
 
 
 config = InvoiceParserConfig()

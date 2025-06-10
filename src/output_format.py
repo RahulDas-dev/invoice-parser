@@ -215,7 +215,7 @@ class Invoice(BaseModel):
             and self.amount_due == 0.0
         )
 
-    def _count_available_details(self) -> int:
+    def count_available_details(self) -> int:
         """Count the number of available (non-default) details."""
         count = 0
 
@@ -248,7 +248,6 @@ class Invoice(BaseModel):
             count += 1
         if self.amount_due != 0.0:
             count += 1
-
         return count
 
     def merge_with(self, other: "Invoice") -> "Invoice":
