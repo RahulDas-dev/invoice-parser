@@ -23,11 +23,16 @@ class PageDetails(BaseModel):
     image_size: tuple[int, int] = Field(default_factory=lambda: (0, 0))
     text_content: str = Field(default="")
     metadata: Mapping[str, Any] = Field(default_factory=dict)
+    invoice: Invoice | None = None
 
     @property
     def is_invoice_page(self) -> bool:
         """Check if the page contains invoice data."""
-        return bool(self.text_content) and "NO_INVOICE_FOUND" not in self.text_content and len(self.metadata) > 0
+        if not self.text_content:
+            return False
+        patterns = r"\bNO_INVOICE_FOUND"
+        match = re.search(patterns, self.text_content, re.IGNORECASE)
+        return not match and len(self.metadata) > 0
 
     @property
     def invoice_number(self) -> str | None:
@@ -45,14 +50,13 @@ class PageDetails(BaseModel):
 class TokenCount(BaseModel):
     model_name: str
     page_no: str
-    request_tokens: int
-    response_tokens: int
+    request_tokens: int = Field(default=0)
+    response_tokens: int = Field(default=0)
 
 
 class PageGroup(BaseModel):
     group_name: str = Field(..., description="Use The Invoice Number as Group Name")
     page_nos: list[str] = Field(
-        ...,
         description="List of page indices that belong to this invioice group , e.g., [P2, P3, P4]",
         default_factory=list,
     )
@@ -60,7 +64,12 @@ class PageGroup(BaseModel):
 
     @property
     def pages(self) -> list[int]:
-        return [int(re.search(r"P(\d+)", page).group(1)) for page in self.page_nos]
+        result = []
+        for page in self.page_nos:
+            match = re.search(r"P(\d+)", page)
+            if match:
+                result.append(int(match.group(1)))
+        return result
 
     @property
     def size(self) -> int:
@@ -77,7 +86,6 @@ class PageGroup(BaseModel):
 
 class PageGroupInfo(BaseModel):
     group_info: list[PageGroup] = Field(
-        ...,
         description="List of page groups with their names and associated page indices",
         default_factory=list,
     )
@@ -108,8 +116,19 @@ class WorkflowState(BaseModel):
 
     def valid_invoice_count(self) -> int:
         """Count the number of valid invoices in the final output."""
-        return sum(1 for invoice in self.page_details if invoice.is_invoice_page)
+        valid_invoices = [
+            p_data.invoice_number
+            for p_data in self.page_details
+            if p_data.is_invoice_page and p_data.invoice_number is not None
+        ]
+        logger.info(f"Valid Invoices: {valid_invoices}")
+        return len(valid_invoices)
 
     def unique_invoice_count(self) -> int:
         """Get a set of unique invoice numbers from the page details."""
-        return sum(1 for p_data in self.page_details if p_data.invoice_number is not None)
+        valid_invoices = [
+            p_data.invoice_number
+            for p_data in self.page_details
+            if p_data.is_invoice_page and p_data.invoice_number is not None
+        ]
+        return len(set(valid_invoices)) if valid_invoices else 0

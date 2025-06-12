@@ -2,6 +2,7 @@ import asyncio
 from asyncio.log import logger
 
 from pydantic_ai import Agent
+from pydantic_ai.agent import AgentRunResult
 
 from src.config import InvoiceParserConfig
 from src.output_format import Invoice
@@ -21,7 +22,7 @@ class SinglePageFormator:
         self.model_name = config.OUTPUT_FORMATOR_MODEL
         self.semaphore = asyncio.Semaphore(config.MAX_CONCURRENT_REQUEST)
 
-    async def run(self, page_details: list[tuple[int, str, dict]]) -> list[tuple[Invoice, TokenCount]]:
+    async def run(self, page_details: list[tuple[int, str, dict]]) -> list[tuple[int, Invoice, TokenCount]]:
         """
         Process the image and return a text description.
         """
@@ -33,9 +34,9 @@ class SinglePageFormator:
             model_settings={"temperature": 0},
         )
 
-        async def run_agent(text_content: str, page_no: int) -> tuple[Invoice, TokenCount]:
+        async def run_agent(text_content: str, page_no: int) -> tuple[AgentRunResult[Invoice], int]:
             async with self.semaphore:
-                logger.info(f"SinglePageFormator Agent Processing Page : {page_no} : {text_content}")
+                # logger.info(f"SinglePageFormator Agent Processing Page : {page_no} : {text_content}")
                 input_msg = SP_FORMATOR_USER_MESSAGE.substitute(
                     PAGE_CONTENT=text_content,
                 )
@@ -47,26 +48,25 @@ class SinglePageFormator:
             agent_response = await asyncio.gather(*task_list)
         except Exception as err:
             logger.error(f"Error in SinglePageFormator Response - {err!s}")
-            return None
+            return []
         outputs = []
         for agent_res, page_no in agent_response:
             token_expense = TokenCount(
                 model_name=self.model_name,
                 page_no=f"P{page_no}",
-                request_tokens=agent_res.usage().request_tokens,
-                response_tokens=agent_res.usage().response_tokens,
+                request_tokens=agent_res.usage().request_tokens or 0,
+                response_tokens=agent_res.usage().response_tokens or 0,
             )
-
-            outputs.append((agent_res.output, token_expense))
+            outputs.append((page_no, agent_res.output, token_expense))
         return outputs
 
 
 class MultiPageFormator:
     def __init__(self, config: InvoiceParserConfig):
         self.model_name = config.PAGE_GROUPPER_MODEL
-        self.semaphore = asyncio.Semaphore(config.max_concurrent_request)
+        self.semaphore = asyncio.Semaphore(config.MAX_CONCURRENT_REQUEST)
 
-    async def run(self, page_details: list[tuple[str, dict, str]]) -> list[tuple[Invoice, TokenCount]]:
+    async def run(self, page_details: list[tuple[str, str, dict]]) -> list[tuple[Invoice, TokenCount]]:
         """
         Process the image and return a text description.
         """
@@ -78,7 +78,7 @@ class MultiPageFormator:
             model_settings={"temperature": 0},
         )
 
-        async def run_agent(text_content: str, metadata: dict, page_no: str) -> tuple[Invoice, TokenCount]:
+        async def run_agent(text_content: str, metadata: dict, page_no: str) -> tuple[AgentRunResult[Invoice], str]:
             async with self.semaphore:
                 logger.info(f"Image To Text Converter Agent Processing Page : {page_no} : {text_content}")
                 input_msg = MP_FORMATOR_USER_MESSAGE.substitute(
@@ -88,19 +88,19 @@ class MultiPageFormator:
                 result = await agent.run(user_prompt=input_msg)
                 return result, page_no
 
-        task_list = [run_agent(text_content, metadata, page_no) for (text_content, metadata, page_no) in page_details]
+        task_list = [run_agent(text_content, metadata, page_no) for (page_no, text_content, metadata) in page_details]
         try:
             agent_response = await asyncio.gather(*task_list)
         except Exception as err:
             logger.error(f"Error in MultiPageFormator Response - {err!s}")
-            return None
+            return []
         outputs = []
         for agent_res, page_no in agent_response:
             token_expense = TokenCount(
                 model_name=self.model_name,
                 page_no=page_no,
-                request_tokens=agent_res.usage().request_tokens,
-                response_tokens=agent_res.usage().response_tokens,
+                request_tokens=agent_res.usage().request_tokens or 0,
+                response_tokens=agent_res.usage().response_tokens or 0,
             )
 
             outputs.append((agent_res.output, token_expense))

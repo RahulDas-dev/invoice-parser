@@ -23,6 +23,7 @@ class FeatureConfig(BaseSettings):
     IMAGE_TO_TEXT_MODEL: str = Field(default="us.meta.llama4-maverick-17b-instruct-v1:0")
     PAGE_GROUPPER_MODEL: str = Field(default="o4-mini-2025-04-16")
     OUTPUT_FORMATOR_MODEL: str = Field(default="gpt-4o-mini")
+    MERGER_STRATEGY: str = Field(default="classic")
     PAGE_AGGREGATOR_MODEL: str = Field(default="us.meta.llama4-maverick-17b-instruct-v1:0")
     MAX_CONCURRENT_REQUEST: PositiveInt = Field(description="Maximum number of calls to the Agents", default=10)
     OUTPUT_PATH: DirectoryPath = Field(description="Path to the OUTPUT directory")

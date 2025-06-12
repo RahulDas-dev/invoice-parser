@@ -149,14 +149,14 @@ class CompanyDetails(BaseModel):
         all_bins = list(self.BIN_Details) + list(other.BIN_Details)
 
         # Use a dict to track unique BIN types and keep the best version
-        bin_dict = {}
+        bin_dict: dict[str, BusinessIdNumber] = {}
         for bin_item in all_bins:
             if not bin_item.is_empty:
                 bin_type = bin_item.BIN_Type
                 if bin_type not in bin_dict or bin_item in self.BIN_Details:
                     bin_dict[bin_type] = bin_item
 
-        merged_bins = [bin_dict.values()]
+        merged_bins = list(bin_dict.values())
 
         # Create merged company
         return CompanyDetails(
@@ -188,7 +188,7 @@ class Invoice(BaseModel):
         description="Details of the buyer Company",
     )
     items: list[Item] = Field(default_factory=list, description="List of items in the invoice")
-    total_tax: list[TaxComponents] = Field(default_factory=lambda: TaxComponents(), description="Total tax components")
+    total_tax: list[TaxComponents] = Field(default_factory=list, description="Total tax components")
     total_charge: float = Field(default=0.0, description="Total charges")
     total_discount: float = Field(default=0.0, description="Total discount applied")
     total_amount: float = Field(default=0.0, description="Total amount of the invoice")
@@ -207,7 +207,7 @@ class Invoice(BaseModel):
             and self.buyer_details.is_empty
             and self.seller_details.is_empty
             and (all(item.is_empty for item in self.items) or not self.items)
-            and self.total_tax.is_empty
+            and all(tax.is_empty for tax in self.total_tax)
             and self.total_charge == 0.0
             and self.total_discount == 0.0
             and self.total_amount == 0.0
@@ -317,7 +317,7 @@ class Invoice(BaseModel):
         """Greater than: self has more available details than other."""
         if not isinstance(other, Invoice):
             return NotImplemented
-        return self._count_available_details() > other._count_available_details()
+        return self.count_available_details() > other.count_available_details()
 
 
 class TokenDetails(BaseModel):

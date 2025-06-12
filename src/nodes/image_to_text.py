@@ -2,7 +2,8 @@ import asyncio
 from asyncio.log import logger
 from pathlib import Path
 
-from pydantic_ai import Agent, AgentRunResult, BinaryContent
+from pydantic_ai import Agent, BinaryContent
+from pydantic_ai.agent import AgentRunResult
 
 from src.config import InvoiceParserConfig
 from src.state import TokenCount
@@ -57,7 +58,7 @@ class ImageToTextConverter:
             agent_response = await asyncio.gather(*task_list)
         except Exception as err:
             logger.error(f"Error in Image To Text Converter Agent Response - {err!s}")
-            return None
+            return []
         outputs = []
         for agent_res, _, page_no in agent_response:
             json_string = extract_json_from_text(agent_res.output)

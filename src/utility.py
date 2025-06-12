@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import AsyncGenerator
 
 from PIL import Image
+from pydantic_ai.models import Model
 
 
 async def async_range(count: int) -> AsyncGenerator[int, None]:
@@ -141,7 +142,7 @@ def extract_invoice_metadata(text: str) -> Mapping[str, str | bool]:
     return metadata
 
 
-def model_factory(model_name: str, provider: str = "openai") -> object:
+def model_factory(model_name: str, provider: str = "openai") -> Model:
     """
     Factory function to create a model instance based on the model name and provider.
 

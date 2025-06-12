@@ -2,8 +2,8 @@ from asyncio.log import logger
 from collections.abc import Mapping
 from typing import Any
 
-from config import InvoiceParserConfig
-from output_format import Invoice
+from src.config import InvoiceParserConfig
+from src.output_format import Invoice
 
 
 class PageAggregator:
@@ -14,7 +14,7 @@ class PageAggregator:
         """
         Process the image and return a text description.
         """
-        logger.info(f"merging {len(invoices)} invoices from Pages {[inv.page_nos for inv in invoices]}")
+        logger.info(f"merging {len(invoices)} invoices from Pages {[inv.page_no for inv in invoices]}")
         if not invoices:
             return Invoice()
 

@@ -47,9 +47,10 @@ async def run_page_groupper() -> None:
 
 
 async def run_end2end_workflow() -> None:
-    from src.workflow import run_workflow
+    from src.workflow import iter_workflow, run_workflow
 
-    result = await run_workflow(Path("Invoice-Copy-20.pdf"))
+    # result = await run_workflow(Path("Invoice-Copy-20.pdf"))
+    result = await iter_workflow(Path("642265.pdf"))
     logging.info(f"Workflow Result: {result}")
 
 
