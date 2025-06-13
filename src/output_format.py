@@ -149,7 +149,7 @@ class CompanyDetails(BaseModel):
         all_bins = list(self.BIN_Details) + list(other.BIN_Details)
 
         # Use a dict to track unique BIN types and keep the best version
-        bin_dict: dict[str, BusinessIdNumber] = {}
+        bin_dict = {}
         for bin_item in all_bins:
             if not bin_item.is_empty:
                 bin_type = bin_item.BIN_Type
@@ -320,29 +320,11 @@ class Invoice(BaseModel):
         return self.count_available_details() > other.count_available_details()
 
 
-class TokenDetails(BaseModel):
-    """
-    Structured model for summarizing token count details.
-    """
-
-    request_tokens: int | None = Field(default=None, description="Token count for request")
-    response_tokens: int | None = Field(default=None, description="Token count for response")
-    page_no: str = Field(default="", description="Page no")
-
-
-class TokenExpenditure(BaseModel):
-    """
-    Structured model for summarizing token count details.
-    """
-
-    agent1_token_count: list[TokenDetails] = Field(
-        default_factory=lambda: [TokenDetails()],
-        description="Token Expenditure for agent 1",
-    )
-    agent2_token_count: list[TokenDetails] = Field(
-        default_factory=lambda: [TokenDetails()],
-        description="Token Expenditure for agent 2",
-    )
+class TokenCount(BaseModel):
+    model_name: str
+    page_no: str
+    request_tokens: int | None = Field(default=None)
+    response_tokens: int | None = Field(default=None)
 
 
 class InvoiceData(BaseModel):
@@ -350,12 +332,7 @@ class InvoiceData(BaseModel):
 
     details: list[Invoice] = Field(description="Deatils of invoice present per page", default_factory=list)
     error_message: str | None = Field(default=None, description="Error message if any error occurs during processing")
-    agent1_token_expenditure: list[TokenDetails] = Field(
-        default_factory=list, description="Token Expenditure for agent 1"
-    )
-    agent2_token_expenditure: list[TokenDetails] = Field(
-        default_factory=list, description="Token Expenditure for agent 2"
-    )
+    token_expenditure: list[TokenCount] = Field(default_factory=list, description="Token Expenditure for agents")
 
 
 class MergeStrategy(BaseModel):

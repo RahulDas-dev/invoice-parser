@@ -271,7 +271,6 @@ After fetching all the data elements as specified in the metadata, organize them
 that includes all the standard invoice fields (like invoice number, date, seller/buyer details, all Item Details , Total Tax, Total Charges, Total Discount, Total Invoice Amount ).
 """
 SP_FORMATOR_USER_MESSAGE = Template("""
-Extract the invoice details from the text content provided below.
 $PAGE_CONTENT
 """)
 

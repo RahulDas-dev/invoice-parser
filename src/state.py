@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.output_format import Invoice
+from src.output_format import Invoice, InvoiceData, TokenCount
 
 logger = logging.getLogger(__name__)
 
@@ -45,13 +45,6 @@ class PageDetails(BaseModel):
             PAGE_NO=self.page_index,
             PAGE_CONTENT=self.text_content,
         )
-
-
-class TokenCount(BaseModel):
-    model_name: str
-    page_no: str
-    request_tokens: int = Field(default=0)
-    response_tokens: int = Field(default=0)
 
 
 class PageGroup(BaseModel):
@@ -94,10 +87,10 @@ class PageGroupInfo(BaseModel):
 class WorkflowState(BaseModel):
     pdf_name: str
     image_dir: str = ""
-    page_details: list[PageDetails] = []
-    page_group_info: list[PageGroup] = []
-    token_count: list[TokenCount] = []
-    final_output: list[Invoice] = []
+    page_details: list[PageDetails] = Field(default_factory=list)
+    page_group_info: list[PageGroup] = Field(default_factory=list)
+    token_count: list[TokenCount] = Field(default_factory=list)
+    final_output: list[Invoice] = Field(default_factory=list)
     error: str | None = None
 
     @property
@@ -132,3 +125,13 @@ class WorkflowState(BaseModel):
             if p_data.is_invoice_page and p_data.invoice_number is not None
         ]
         return len(set(valid_invoices)) if valid_invoices else 0
+
+    def to_invoice_data(self) -> InvoiceData:
+        """Convert the workflow state to an Invoice object."""
+        invoice_data = InvoiceData()
+        invoice_data.token_expenditure = self.token_count
+        if self.error:
+            invoice_data.error_message = self.error
+        else:
+            invoice_data.details = self.final_output
+        return invoice_data

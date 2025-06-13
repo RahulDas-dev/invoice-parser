@@ -1,6 +1,7 @@
 import asyncio
-from asyncio.log import logger
+import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pypdfium2 as pdfium
 from pypdfium2._helpers import PdfBitmap
@@ -8,10 +9,15 @@ from pypdfium2._helpers import PdfBitmap
 from src.config import InvoiceParserConfig
 from src.utility import async_range
 
+if TYPE_CHECKING:
+    from PIL.Image import Image
+
+logger = logging.getLogger("asyncio")
+
 
 class Pdf2ImgConverter:
     def __init__(self, cfg: InvoiceParserConfig) -> None:
-        self.input_path: Path = cfg.INPUT_PATH
+        self.input_path: Path = Path(cfg.OUTPUT_PATH)
         self.output_path: Path = Path(cfg.OUTPUT_PATH) / "pdf2img"
         if not self.output_path.exists():
             self.output_path.mkdir(parents=True)
@@ -28,7 +34,7 @@ class Pdf2ImgConverter:
         self, page_bitmap: PdfBitmap, page_index: int, output_folder: Path
     ) -> tuple[int, Path, tuple[int, int]]:
         def process_and_save() -> tuple[int, Path, tuple[int, int]]:
-            pil_image = page_bitmap.to_pil()
+            pil_image: Image = page_bitmap.to_pil()
             save_format_ = "PNG" if self.save_format == "png" else self.save_format
             save_path = output_folder / f"Page_{page_index:04}.png"
             if not self.resize_ops_enabled:
@@ -52,7 +58,7 @@ class Pdf2ImgConverter:
                 else:
                     logger.info(f"Processing Page No {page_index} Images shape {pil_image.size} ...")
                     new_image = pil_image
-                    new_image = pil_image.save(save_path, save_format_)
+                    pil_image.save(save_path, save_format_)
             return page_index, save_path, new_image.size
 
         return await asyncio.to_thread(process_and_save)
@@ -66,9 +72,8 @@ class Pdf2ImgConverter:
             if not (self.output_path / Path(f"{subfolder}_{count}")).exists():
                 return f"{subfolder}_{count}"
 
-    async def run(self, pdf_name: str | Path) -> tuple[Path, list[tuple[int, Path, tuple[int, int]]]]:
-        pdf_path = self.input_path / pdf_name
-        if not pdf_path.exists():  # type: ignore[reportOptionalMemberAccess]
+    async def run(self, pdf_path: str | Path) -> tuple[Path, list[tuple[int, Path, tuple[int, int]]]]:
+        if not Path(pdf_path).exists():  # type: ignore[reportOptionalMemberAccess]
             logger.info(f"PDF file {pdf_path} does not exist.")
             raise FileNotFoundError(f"PDF file {pdf_path} does not exist.")
         filename = Path(pdf_path).stem
@@ -86,7 +91,7 @@ class Pdf2ImgConverter:
             async for page_index in async_range(page_count):
                 tasks.append(
                     self._convert_to_image_and_save(
-                        pdf_doc[page_index].render(scale=3, rotation=0),
+                        pdf_doc[page_index].render(scale=8.4, rotation=0),  # type: ignore
                         page_index + 1,
                         output_folder,
                     )

@@ -48,4 +48,4 @@ class InvoiceParserConfig(DeploymentConfig, FeatureConfig):
     model_config = SettingsConfigDict(env_file=".config", env_file_encoding="utf-8", extra="ignore")
 
 
-config = InvoiceParserConfig()
+app_config = InvoiceParserConfig()  # type: ignore

@@ -18,9 +18,9 @@ async def async_range(count: int) -> AsyncGenerator[int, None]:
 
 def get_aws_keys() -> dict:
     return {
-        "aws_access_key_id": os.getenv("AWS_ACCESS_KEY"),
-        "aws_secret_access_key": os.getenv("AWS_SECRET_KEY"),
-        "region_name": os.getenv("REGION_NAME"),
+        "aws_access_key_id": os.getenv("AWS_ACCESS_KEY_ID"),
+        "aws_secret_access_key": os.getenv("AWS_SECRET_ACCESS_KEY"),
+        "region_name": os.getenv("AWS_REGION_NAME"),
     }
 
 
@@ -165,4 +165,24 @@ def model_factory(model_name: str, provider: str = "openai") -> Model:
         from pydantic_ai.models.openai import OpenAIModel
 
         return OpenAIModel(model_name=model_name)
+    if provider == "azure":
+        from openai import AsyncAzureOpenAI
+        from pydantic_ai.models.openai import OpenAIModel
+        from pydantic_ai.providers.azure import AzureProvider
+
+        model_name_ = model_name or "finaclegpt4.1"
+        if model_name_ not in ["finaclegpt4.1", "finaclegpt4o16k"]:
+            raise ValueError("Invalid model name for Azure")
+
+        return OpenAIModel(
+            model_name_,
+            provider=AzureProvider(
+                openai_client=AsyncAzureOpenAI(
+                    azure_endpoint=os.environ.get("AZURE_API_BASE", ""),
+                    azure_deployment=model_name_,
+                    api_version=os.environ.get("AZURE_API_VERSION"),
+                    api_key=os.environ.get("AZURE_API_KEY"),
+                )
+            ),
+        )
     raise ValueError(f"Unsupported provider: {provider}")

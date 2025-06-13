@@ -6,7 +6,7 @@ from typing import Any, Mapping
 from pydantic_ai import Agent
 
 from src.config import InvoiceParserConfig
-from src.state import TokenCount
+from src.output_format import TokenCount
 from src.utility import (
     extract_json_from_text,
     model_factory,
@@ -20,7 +20,9 @@ class PageGroupper:
         self.model_name = config.PAGE_GROUPPER_MODEL
         self.semaphore = asyncio.Semaphore(config.MAX_CONCURRENT_REQUEST)
 
-    async def run(self, page_metadata: Mapping[str, Any], page_no: str) -> tuple[Mapping[str, Any], TokenCount]:
+    async def run(
+        self, page_metadata: Mapping[str, Any], page_no: str
+    ) -> tuple[Mapping[str, Any], TokenCount, str | None]:
         """
         Process the image and return a text description.
         """
@@ -37,17 +39,17 @@ class PageGroupper:
             agent_response = await agent.run(user_prompt=message)
             if agent_response.output in [None, ""]:
                 logger.error(f"Page Groupper response is None for page {page_no}")
-                return {}, TokenCount(model_name=self.model_name, page_no=page_no)
+                return {}, TokenCount(model_name=self.model_name, page_no=page_no), "PAge Groupper response is None"
             json_string = extract_json_from_text(agent_response.output)
             json_string_ = agent_response.output if json_string is None else json_string
             page_group_info = json.loads(json_string_)
         except Exception as err:
             logger.error(f"Error processing page {page_no}: {err}")
-            return {}, TokenCount(model_name=self.model_name, page_no=page_no)
+            return {}, TokenCount(model_name=self.model_name, page_no=page_no), str(err)
         token_expenditure = TokenCount(
             model_name=self.model_name,
             page_no=page_no,
-            request_tokens=agent_response.usage().request_tokens or 0,
-            response_tokens=agent_response.usage().response_tokens or 0,
+            request_tokens=agent_response.usage().request_tokens or None,
+            response_tokens=agent_response.usage().response_tokens or None,
         )
-        return page_group_info, token_expenditure
+        return page_group_info, token_expenditure, None
