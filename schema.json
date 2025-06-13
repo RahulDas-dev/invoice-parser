@@ -1,0 +1,265 @@
+{
+   "$defs":{
+      "BusinessIdNumber":{
+         "description":"Structured model for summarizing company details.",
+         "properties":{
+            "BIN_Type":{
+               "default":"NOT_AVAILABLE",
+               "description":"Business identification type like GSTIN, PAN, TAN, IEC and CIN",
+               "title":"Bin Type",
+               "type":"string"
+            },
+            "BIN_Number":{
+               "default":"NOT_AVAILABLE",
+               "description":"Respective identification number",
+               "title":"Bin Number",
+               "type":"string"
+            }
+         },
+         "title":"BusinessIdNumber",
+         "type":"object"
+      },
+      "CompanyDetails":{
+         "description":"Structured model for summarizing company details.",
+         "properties":{
+            "name":{
+               "default":"NOT_AVAILABLE",
+               "description":"Name of the company",
+               "title":"Name",
+               "type":"string"
+            },
+            "BIN_Details":{
+               "description":"List of unique business identification numbers",
+               "items":{
+                  "$ref":"#/$defs/BusinessIdNumber"
+               },
+               "title":"Bin Details",
+               "type":"array"
+            },
+            "address":{
+               "default":"NOT_AVAILABLE",
+               "description":"Address of the company",
+               "title":"Address",
+               "type":"string"
+            },
+            "state":{
+               "default":"NOT_AVAILABLE",
+               "description":"State of the company present in address",
+               "title":"State",
+               "type":"string"
+            },
+            "country":{
+               "default":"NOT_AVAILABLE",
+               "description":"Country of the company present in address",
+               "title":"Country",
+               "type":"string"
+            },
+            "pin_code":{
+               "default":"NOT_AVAILABLE",
+               "description":"6 digit Pin code of the company present in address",
+               "title":"Pin Code",
+               "type":"string"
+            },
+            "phone_number":{
+               "default":"NOT_AVAILABLE",
+               "description":"Phone number of the company",
+               "title":"Phone Number",
+               "type":"string"
+            },
+            "email":{
+               "default":"NOT_AVAILABLE",
+               "description":"Email of the company",
+               "title":"Email",
+               "type":"string"
+            }
+         },
+         "title":"CompanyDetails",
+         "type":"object"
+      },
+      "Item":{
+         "description":"Structured model for summarizing item details in the invoice.",
+         "properties":{
+            "slno":{
+               "exclusiveMinimum":0,
+               "title":"Slno",
+               "type":"integer"
+            },
+            "description":{
+               "default":"NOT_AVAILABLE",
+               "description":"Description of the item",
+               "title":"Description",
+               "type":"string"
+            },
+            "inventory_flag":{
+               "default":false,
+               "description":"Depicts if the item is an inventory item for which inventory or stock must be updated.",
+               "title":"Inventory Flag",
+               "type":"boolean"
+            },
+            "quantity":{
+               "default":0.0,
+               "description":"Quantity of the item",
+               "title":"Quantity",
+               "type":"number"
+            },
+            "UOM":{
+               "default":"NOT_AVAILABLE",
+               "description":"Unit of measurement",
+               "title":"Uom",
+               "type":"string"
+            },
+            "HSN_CODE":{
+               "default":"NOT_AVAILABLE",
+               "description":"HSN code of the item, sometimes called as SAC code",
+               "title":"Hsn Code",
+               "type":"string"
+            },
+            "price":{
+               "default":0.0,
+               "description":"Price of the item",
+               "title":"Price",
+               "type":"number"
+            },
+            "tax":{
+               "description":"List of taxes for the line item",
+               "items":{
+                  "$ref":"#/$defs/TaxComponents"
+               },
+               "title":"Tax",
+               "type":"array"
+            },
+            "discount":{
+               "default":0.0,
+               "description":"Discount amount of the item",
+               "title":"Discount",
+               "type":"number"
+            },
+            "amount":{
+               "default":0.0,
+               "description":"Amount of the item",
+               "title":"Amount",
+               "type":"number"
+            },
+            "currency":{
+               "default":"INR",
+               "description":"Currency of the price",
+               "title":"Currency",
+               "type":"string"
+            }
+         },
+         "required":[
+            "slno"
+         ],
+         "title":"Item",
+         "type":"object"
+      },
+      "TaxComponents":{
+         "description":"Structured model for summarizing tax components.",
+         "properties":{
+            "Tax_Type":{
+               "default":"NOT_AVAILABLE",
+               "description":"Tax type like CGST, SGST, UTGST, IGST, VAT etc",
+               "title":"Tax Type",
+               "type":"string"
+            },
+            "Tax_Rate":{
+               "default":0.0,
+               "description":"Tax Rate in percentage",
+               "title":"Tax Rate",
+               "type":"number"
+            },
+            "Tax_Amount":{
+               "default":0.0,
+               "description":"Tax Amount",
+               "title":"Tax Amount",
+               "type":"number"
+            }
+         },
+         "title":"TaxComponents",
+         "type":"object"
+      }
+   },
+   "description":"Structured model for summarizing invoice details.",
+   "properties":{
+      "invoice_number":{
+         "default":"NOT_AVAILABLE",
+         "description":"Invoice number",
+         "title":"Invoice Number",
+         "type":"string"
+      },
+      "invoice_date":{
+         "default":"NOT_AVAILABLE",
+         "description":"Invoice date",
+         "title":"Invoice Date",
+         "type":"string"
+      },
+      "invoice_due_date":{
+         "default":"NOT_AVAILABLE",
+         "description":"Invoice due date",
+         "title":"Invoice Due Date",
+         "type":"string"
+      },
+      "seller_details":{
+         "$ref":"#/$defs/CompanyDetails",
+         "description":"Details of the seller Comapny"
+      },
+      "buyer_details":{
+         "$ref":"#/$defs/CompanyDetails",
+         "description":"Details of the buyer Company"
+      },
+      "items":{
+         "description":"List of items in the invoice",
+         "items":{
+            "$ref":"#/$defs/Item"
+         },
+         "title":"Items",
+         "type":"array"
+      },
+      "total_tax":{
+         "description":"Total tax components",
+         "items":{
+            "$ref":"#/$defs/TaxComponents"
+         },
+         "title":"Total Tax",
+         "type":"array"
+      },
+      "total_charge":{
+         "default":0.0,
+         "description":"Total charges",
+         "title":"Total Charge",
+         "type":"number"
+      },
+      "total_discount":{
+         "default":0.0,
+         "description":"Total discount applied",
+         "title":"Total Discount",
+         "type":"number"
+      },
+      "total_amount":{
+         "default":0.0,
+         "description":"Total amount of the invoice",
+         "title":"Total Amount",
+         "type":"number"
+      },
+      "amount_paid":{
+         "default":0.0,
+         "description":"Amount paid",
+         "title":"Amount Paid",
+         "type":"number"
+      },
+      "amount_due":{
+         "default":0.0,
+         "description":"Amount due",
+         "title":"Amount Due",
+         "type":"number"
+      },
+      "page_no":{
+         "default":"",
+         "description":"Page no in string Format, E.g., '1-2' for pages 1 and 2, or '3' for page 3",
+         "title":"Page No",
+         "type":"string"
+      }
+   },
+   "title":"Invoice",
+   "type":"object"
+}
