@@ -17,11 +17,11 @@ logging.basicConfig(
 )
 
 
-async def run_pdf_to_image_conversion() -> None:
+async def run_pdf_to_image_conversion(pdf_path: Path) -> None:
     from src.nodes import Pdf2ImgConverter
 
     converter = Pdf2ImgConverter(app_config)
-    output_path, page_data = await converter.run("Invoice-Copy-20.pdf")
+    output_path, page_data = await converter.run(pdf_path)
     logging.info(f"Output Path: {output_path}")
     logging.info(f"Page Data: {page_data}")
 
@@ -59,16 +59,16 @@ async def run_end2end_workflow(pdf_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python app.py <path_to_pdf>")
-        sys.exit(1)
+    # if len(sys.argv) < 2:
+    #    print("Usage: python app.py <path_to_pdf>")
+    #    sys.exit(1)
 
-    pdf_path = sys.argv[1]
-
+    # pdf_path = sys.argv[1]
+    pdf_path = Path("D:/datasets/invoice_pdf/Invoice-Copy-19.pdf")
     # Validate the path exists
     if not Path(pdf_path).is_file():
         print(f"Error: File not found at '{pdf_path}'")
         sys.exit(1)
 
     pdf_path = Path(pdf_path)
-    asyncio.run(run_end2end_workflow(pdf_path))
+    asyncio.run(run_pdf_to_image_conversion(pdf_path))

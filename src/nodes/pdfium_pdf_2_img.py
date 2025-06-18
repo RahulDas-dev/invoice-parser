@@ -17,7 +17,6 @@ logger = logging.getLogger("asyncio")
 
 class Pdf2ImgConverter:
     def __init__(self, cfg: InvoiceParserConfig) -> None:
-        self.input_path: Path = Path(cfg.OUTPUT_PATH)
         self.output_path: Path = Path(cfg.OUTPUT_PATH) / "pdf2img"
         if not self.output_path.exists():
             self.output_path.mkdir(parents=True)

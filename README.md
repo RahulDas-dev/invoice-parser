@@ -21,8 +21,9 @@ Built using **Pydantic-AI** and **Pydantic-Graph**, the workflow uses **Large La
 - **Agentic workflow**: Implements modular agent steps using Pydantic-AI and Pydantic-Graph.
 - **Structured output**: Extracted data is validated and output using a well-defined Pydantic schema.
 - **Table & key-value extraction**: Supports varied layouts including tables, text blocks, and image-embedded sections.
-
 ---
+##### Working on Observability
+
 
 ## Tech Stack
 
